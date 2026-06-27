@@ -63,7 +63,7 @@ OpenClaw cron 源数据位于：
     "kind": "agentTurn",
     "message": "真正的任务指令",
     "timeoutSeconds": 900,
-    "model": "zai/glm-5-turbo"
+    "model": "doubao-seed-2-0-code-preview-260215"
   },
   "delivery": {
     "mode": "announce",
