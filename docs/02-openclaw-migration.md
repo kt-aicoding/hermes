@@ -16,7 +16,7 @@
 迁移前先备份 Hermes 和 OpenClaw：
 
 ```bash
-mkdir -p ~/hermes-migration-backups/manual-openclaw-migration-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$HOME/hermes-migration-backups/manual-openclaw-migration-$(date +%Y%m%d-%H%M%S)"
 ```
 
 建议备份：
@@ -91,4 +91,3 @@ OpenClaw cron 源数据位于：
   `~/.hermes/openclaw-workspaces/workspace`
 
 这样 Hermes cron 执行时可以加载对应的 `AGENTS.md` 和仓库上下文。
-
