@@ -27,6 +27,7 @@ python3 scripts/optimize-cron-from-openclaw.py --apply
 
 - [适用场景](#适用场景)
 - [实践成果](#实践成果)
+- [图示](#图示)
 - [核心问题](#核心问题)
 - [快速开始](#快速开始)
 - [迁移流程](#迁移流程)
@@ -71,6 +72,70 @@ prompt_equals_name: 0
 empty_prompt: 0
 workdir_null: 0
 old_openclaw_prompt_refs: 0
+```
+
+## 图示
+
+### 迁移总览
+
+```mermaid
+flowchart LR
+    A["OpenClaw 本机数据"] --> B["备份"]
+    B --> C["Hermes 官方迁移"]
+    C --> D["复制 workspace"]
+    D --> E["恢复 cron prompt 和 workdir"]
+    E --> F["配置 Ark provider"]
+    F --> G["安装 Hermes gateway"]
+    G --> H["launchd 开机自启"]
+    H --> I["Hermes cron 自动执行"]
+    I --> J["本机输出与验证"]
+```
+
+### Cron 数据修复
+
+```mermaid
+flowchart TD
+    A["OpenClaw cron job"] --> B{"读取字段"}
+    B --> C["name - 展示名称"]
+    B --> D["payload.message - 真实任务指令"]
+    B --> E["schedule - 调度规则"]
+    B --> F["state - 历史状态"]
+
+    C --> G["不要直接当 prompt"]
+    D --> H["写入 Hermes prompt"]
+    E --> I["保留 next_run 和 schedule"]
+    F --> J["保留 enabled 或 paused"]
+
+    H --> K["补充 workdir"]
+    I --> L["Hermes cron job"]
+    J --> L
+    K --> L
+
+    L --> M{"质量检查"}
+    M --> N["prompt_equals_name = 0"]
+    M --> O["workdir_null = 0"]
+    M --> P["old_openclaw_prompt_refs = 0"]
+```
+
+### 运行验证闭环
+
+```mermaid
+sequenceDiagram
+    participant User as Operator
+    participant CLI as Hermes CLI
+    participant Gateway as Hermes Gateway
+    participant Cron as Cron Scheduler
+    participant LLM as Ark Model
+    participant Output as Local Output
+
+    User->>CLI: verify-hermes.sh
+    CLI->>Gateway: gateway status
+    CLI->>Cron: cron status and jobs quality
+    Cron->>Gateway: scheduled tick
+    Gateway->>LLM: run job prompt
+    LLM-->>Gateway: final response
+    Gateway->>Output: save markdown output
+    User->>CLI: inspect last_status and output
 ```
 
 ## 核心问题
