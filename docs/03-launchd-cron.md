@@ -18,7 +18,7 @@ hermes gateway status --full
 预期：
 
 ```text
-Launchd plist: ~/Library/LaunchAgents/ai.hermes.gateway.plist
+Launchd plist: $HOME/Library/LaunchAgents/ai.hermes.gateway.plist
 Service definition matches the current Hermes install
 Gateway is supervised by launchd
 Auto-start at login and auto-restart on crash are available.
@@ -62,7 +62,7 @@ launchctl print-disabled "gui/$(id -u)" | rg 'ai\.openclaw\.gateway'
 当任务 `deliver=local` 时，cron 输出会保存到：
 
 ```text
-~/.hermes/cron/output/<job-id>/<timestamp>.md
+$HOME/.hermes/cron/output/<job-id>/<timestamp>.md
 ```
 
 这适合没有配置 Telegram/Discord/Slack 的本地环境。

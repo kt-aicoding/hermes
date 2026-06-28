@@ -5,10 +5,10 @@
 本次实践使用官方安装方式安装 Hermes Agent，最终本机布局：
 
 ```text
-~/.hermes/hermes-agent
-~/.hermes/hermes-agent/venv/bin/hermes
-~/.local/bin/hermes
-~/.npm-global/bin/hermes
+$HOME/.hermes/hermes-agent
+$HOME/.hermes/hermes-agent/venv/bin/hermes
+$HOME/.local/bin/hermes
+$HOME/.npm-global/bin/hermes
 ```
 
 验证版本：
@@ -67,6 +67,6 @@ OK
 ## 注意事项
 
 - Ark 标准 `/api/v3` 和 coding `/api/coding/v3` 行为可能不同。本次实践中 coding endpoint 对代码模型可用。
-- `hermes doctor` 可能提示 `No API key found in ~/.hermes/.env`，因为它不一定识别自定义 `ARK_API_KEY`。只要 `hermes -z` 实际返回正常，就说明 runtime provider 可用。
+- `hermes doctor` 可能提示 `No API key found in $HOME/.hermes/.env`，因为它不一定识别自定义 `ARK_API_KEY`。只要 `hermes -z` 实际返回正常，就说明 runtime provider 可用。
 - 不要把 `.env`、shell 历史、命令输出中的 token 写入仓库。
 

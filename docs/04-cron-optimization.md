@@ -22,7 +22,7 @@ workdir_null: 36
 从 OpenClaw 源文件恢复：
 
 ```text
-~/.openclaw/cron/jobs.json.migrated
+$HOME/.openclaw/cron/jobs.json.migrated
 ```
 
 恢复规则：
@@ -55,14 +55,16 @@ scripts/optimize-cron-from-openclaw.py
 默认是 dry-run：
 
 ```bash
-python scripts/optimize-cron-from-openclaw.py
+python3 scripts/optimize-cron-from-openclaw.py
 ```
 
 实际写入：
 
 ```bash
-python scripts/optimize-cron-from-openclaw.py --apply
+python3 scripts/optimize-cron-from-openclaw.py --apply
 ```
+
+脚本输出会脱敏 OpenClaw delivery 目标，并避免打印完整 prompt，降低终端日志泄露风险。`--apply` 模式会先备份当前 Hermes cron 数据，再写入更新。
 
 ## 审批策略
 
@@ -80,4 +82,3 @@ python scripts/optimize-cron-from-openclaw.py --apply
 3. 观察下一轮真实 cron 输出
 4. 对确实需要外部写入的任务，逐个设计脚本或安全 allowlist
 5. 不要默认开启全局自动审批
-

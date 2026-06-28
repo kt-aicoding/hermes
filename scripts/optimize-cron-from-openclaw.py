@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from datetime import datetime, timezone
@@ -38,6 +39,25 @@ AI_KEYWORDS = [
 ROOT_KEYWORDS = ["系统健康", "定时任务健康", "订阅账单", "三爪"]
 
 
+def display_path(path: Path, home: Path) -> str:
+    """Return a stable path for reports without exposing local usernames."""
+    try:
+        return "$HOME/" + str(path.expanduser().relative_to(home)).rstrip("/")
+    except ValueError:
+        return str(path)
+
+
+def redact_delivery(delivery: object) -> object:
+    """Keep routing shape while redacting concrete recipient identifiers."""
+    if not isinstance(delivery, dict):
+        return delivery
+    redacted = dict(delivery)
+    for key in ("to", "chat_id", "channel_id", "thread_id", "user_id", "phone", "email"):
+        if redacted.get(key):
+            redacted[key] = "[REDACTED]"
+    return redacted
+
+
 def choose_workdir(name: str, prompt: str, root_workdir: str, ai_workdir: str) -> str:
     text = f"{name}\n{prompt}"
     if any(keyword in text for keyword in ROOT_KEYWORDS):
@@ -63,6 +83,7 @@ def main() -> int:
 
     hermes_home = Path(args.hermes_home).expanduser()
     openclaw_home = Path(args.openclaw_home).expanduser()
+    user_home = Path.home().expanduser()
     hermes_agent = Path(args.hermes_agent).expanduser() if args.hermes_agent else hermes_home / "hermes-agent"
     source_path = openclaw_home / "cron" / "jobs.json.migrated"
     jobs_path = hermes_home / "cron" / "jobs.json"
@@ -76,12 +97,21 @@ def main() -> int:
     if not hermes_agent.exists():
         raise SystemExit(f"missing Hermes Agent path: {hermes_agent}")
 
+    venv_python = hermes_agent / "venv" / "bin" / "python"
+    if sys.version_info < (3, 10) and venv_python.exists() and Path(sys.executable).resolve() != venv_python.resolve():
+        os.execv(str(venv_python), [str(venv_python), *sys.argv])
+
     sys.path.insert(0, str(hermes_agent))
     from cron.jobs import load_jobs, update_job  # type: ignore
 
     source = json.loads(source_path.read_text())
     source_by_id = {job["id"]: job for job in source.get("jobs", [])}
     now = datetime.now(timezone.utc).isoformat()
+    backup_dir = None
+    if args.apply:
+        backup_dir = hermes_home / "backups" / f"cron-opt-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(jobs_path, backup_dir / "jobs.before.json")
 
     changes = []
     skipped = []
@@ -106,16 +136,16 @@ def main() -> int:
                 "id": job["id"],
                 "name": job.get("name"),
                 "prompt_changed": job.get("prompt") != message,
-                "old_prompt": job.get("prompt"),
-                "new_prompt": message,
-                "old_workdir": job.get("workdir"),
-                "new_workdir": workdir,
+                "old_prompt_length": len(job.get("prompt") or ""),
+                "new_prompt_length": len(message),
+                "old_workdir": display_path(Path(job["workdir"]), user_home) if job.get("workdir") else None,
+                "new_workdir": display_path(Path(workdir), user_home),
                 "enabled": job.get("enabled"),
                 "state": job.get("state"),
                 "next_run_at": job.get("next_run_at"),
                 "openclaw_timeout_seconds": payload.get("timeoutSeconds"),
                 "openclaw_model": payload.get("model"),
-                "openclaw_delivery": src.get("delivery"),
+                "openclaw_delivery": redact_delivery(src.get("delivery")),
             }
         )
 
@@ -128,7 +158,7 @@ def main() -> int:
                     "prompt_restored_at": now,
                     "openclaw_timeout_seconds": payload.get("timeoutSeconds"),
                     "openclaw_model": payload.get("model"),
-                    "openclaw_delivery": src.get("delivery"),
+                    "openclaw_delivery": redact_delivery(src.get("delivery")),
                     "optimized_by": "optimize-cron-from-openclaw.py",
                 }
             )
@@ -136,20 +166,17 @@ def main() -> int:
 
     report = {
         "apply": args.apply,
-        "source": str(source_path),
-        "jobs_path": str(jobs_path),
-        "root_workdir": root_workdir,
-        "ai_workdir": ai_workdir,
+        "source": display_path(source_path, user_home),
+        "jobs_path": display_path(jobs_path, user_home),
+        "root_workdir": display_path(Path(root_workdir), user_home),
+        "ai_workdir": display_path(Path(ai_workdir), user_home),
         "changed_or_checked": len(changes),
         "skipped": skipped,
         "changes": changes,
     }
 
-    if args.apply:
-        backup_dir = hermes_home / "backups" / f"cron-opt-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(jobs_path, backup_dir / "jobs.after.json")
-        report["backup_dir"] = str(backup_dir)
+    if backup_dir is not None:
+        report["backup_dir"] = display_path(backup_dir, user_home)
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
@@ -157,4 +184,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
